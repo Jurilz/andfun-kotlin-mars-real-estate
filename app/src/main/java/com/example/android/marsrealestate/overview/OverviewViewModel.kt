@@ -20,6 +20,11 @@ package com.example.android.marsrealestate.overview
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.android.marsrealestate.network.MarsApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * The [ViewModel] that is attached to the [OverviewFragment].
@@ -40,10 +45,27 @@ class OverviewViewModel : ViewModel() {
         getMarsRealEstateProperties()
     }
 
+    private var viewModelJob = Job()
+    private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
+
     /**
      * Sets the value of the status LiveData to the Mars API status.
      */
     private fun getMarsRealEstateProperties() {
-        _response.value = "Set the Mars API Response here!"
+
+        coroutineScope.launch {
+            var getPropertiesDeferred  = MarsApi.retrofitService.getProperties()
+            try {
+                var listResult = getPropertiesDeferred.await()
+                _response.value = "Success: ${listResult.size} Mars Properties retrieved."
+            } catch (t: Throwable) {
+                _response.value = "Failure: " + t.message
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        viewModelJob.cancel()
     }
 }
